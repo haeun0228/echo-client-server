@@ -31,7 +31,10 @@ void usage() {
 // std::mutex clients_mutex;
 
 // 다중 상속 이용 
-struct Clients std::vector<int>, std::mutex{}clients;
+struct Clients std::vector<int> {
+	// 다이아몬드 상속 문제 해결 
+	std::mutex m;
+}clients;
 
 struct Param {
 	bool echo{false};
@@ -80,7 +83,7 @@ void recvThread(int sd) {
 			}
 			if(param.broadcast) {
 				// send message to all clients that are connected 
-				std::lock_guard<std::mutex> lock(clients);
+				std::lock_guard<std::mutex> lock(clients.m);
 				for(int client_sd : clients){
 					if(client_sd!=sd){
 						ssize_t newres = ::send(client_sd, buf, res, 0);
@@ -96,7 +99,7 @@ void recvThread(int sd) {
 	}
 	printf("disconnected\n");
 	fflush(stdout);    
-	std::lock_guard<std::mutex> lock(clients_mutex);
+	std::lock_guard<std::mutex> lock(clients_mutex.m);
 	clients.erase(std::remove(clients.begin(), clients.end(),sd), clients.end());     
 	::close(sd);
 }
@@ -172,7 +175,7 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 		{
-			std::lock_guard<std::mutex> lock(clients);
+			std::lock_guard<std::mutex> lock(clients.m);
 			clients.push_back(newsd);
 		}
 		std::thread* t = new std::thread(recvThread, newsd);
