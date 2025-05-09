@@ -27,8 +27,11 @@ void usage() {
 }
 
 // clients vector
-std::vector<int> clients;
-std::mutex clients_mutex; 
+// std::vector<int> clients;
+// std::mutex clients_mutex;
+
+// 다중 상속 이용 
+struct Clients std::vector<int>, std::mutex{}clients;
 
 struct Param {
 	bool echo{false};
@@ -77,7 +80,7 @@ void recvThread(int sd) {
 			}
 			if(param.broadcast) {
 				// send message to all clients that are connected 
-				std::lock_guard<std::mutex> lock(clients_mutex);
+				std::lock_guard<std::mutex> lock(clients);
 				for(int client_sd : clients){
 					if(client_sd!=sd){
 						ssize_t newres = ::send(client_sd, buf, res, 0);
@@ -168,8 +171,10 @@ int main(int argc, char* argv[]) {
 			myerror("accept");
 			break;
 		}
-		std::lock_guard<std::mutex> lock(clients_mutex);
-		clients.push_back(newsd);
+		{
+			std::lock_guard<std::mutex> lock(clients);
+			clients.push_back(newsd);
+		}
 		std::thread* t = new std::thread(recvThread, newsd);
 		t->detach();
 	}
